@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nederlandse Winters Statistieken - 1901-2026</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh; color: #e8e8e8; padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 25px; }
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #74b9ff, #a29bfe);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; margin-bottom: 8px;
+        }
+        .subtitle { color: #a0a0a0; font-size: 0.95rem; }
+        .controls {
+            display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;
+            margin-bottom: 25px; padding: 20px;
+            background: rgba(255,255,255,0.05); border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .control-group label { font-size: 0.85rem; color: #a0a0a0; font-weight: 500; }
+        .control-group select {
+            padding: 10px 14px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08); color: #fff;
+            font-size: 0.95rem; cursor: pointer; min-width: 180px;
+        }
+        .control-group select:focus { outline: none; border-color: #74b9ff; }
+        .control-group select option { background: #1a1a2e; color: #fff; }
+        .year-range { display: flex; align-items: center; gap: 15px; }
+        .year-input { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .year-input input {
+            width: 90px; padding: 10px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08); color: #fff;
+            font-size: 1rem; text-align: center;
+        }
+        .year-input input:focus { outline: none; border-color: #74b9ff; }
+        .year-separator { font-size: 1.5rem; color: #74b9ff; }
+        .current-stats { display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; flex-wrap: wrap; }
+        .stat-card {
+            background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
+            border-radius: 12px; padding: 15px 25px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.1); min-width: 140px;
+        }
+        .stat-card.highlight { border-color: #00cec9; box-shadow: 0 0 20px rgba(0,206,201,0.2); }
+        .stat-label { font-size: 0.8rem; color: #a0a0a0; margin-bottom: 4px; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; color: #fff; }
+        .stat-card.highlight .stat-value { color: #00cec9; }
+        .stat-unit { font-size: 0.75rem; color: #888; }
+        .chart-container {
+            background: rgba(255,255,255,0.05); border-radius: 20px;
+            padding: 25px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.08);
+        }
+        .chart-title { text-align: center; color: #74b9ff; margin-bottom: 15px; font-size: 1.1rem; }
+        .legend-container {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+            margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+        .legend-color { width: 14px; height: 14px; border-radius: 3px; }
+        .metric-description {
+            text-align: center; padding: 15px; background: rgba(255,255,255,0.03);
+            border-radius: 12px; margin-top: 20px; color: #b0b0b0;
+            font-size: 0.9rem; line-height: 1.6;
+        }
+        footer { text-align: center; margin-top: 25px; padding: 15px; color: #606060; font-size: 0.8rem; }
+        footer a { color: #74b9ff; text-decoration: none; }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.5rem; }
+            .controls { padding: 15px; gap: 15px; }
+            .control-group select { min-width: 150px; }
+            .stat-card { padding: 12px 18px; min-width: 110px; }
+            .stat-value { font-size: 1.5rem; }
+            .chart-container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>❄️ Nederlandse Winters Statistieken</h1>
+        <p class="subtitle">Interactief overzicht van winterdata in De Bilt (1901-2026)</p>
+    </header>
+    <div class="controls">
+        <div class="control-group">
+            <label>Meetwaarde</label>
+            <select id="metricSelect">
+                <option value="hellmann">Hellmann Koudegetal</option>
+                <option value="avgTemp">Gemiddelde temperatuur (°C)</option>
+                <option value="minTemp">Gem. minimum temperatuur (°C)</option>
+                <option value="maxTemp">Gem. maximum temperatuur (°C)</option>
+                <option value="vorstdagen">Aantal vorstdagen</option>
+                <option value="ijsdagen">Aantal ijsdagen</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Periode selecteren</label>
+            <div class="year-range">
+                <div class="year-input">
+                    <input type="number" id="startYear" min="1901" max="2026" value="1901">
+                    <span class="stat-unit">vanaf</span>
+                </div>
+                <span class="year-separator">—</span>
+                <div class="year-input">
+                    <input type="number" id="endYear" min="1901" max="2026" value="2026">
+                    <span class="stat-unit">t/m</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="current-stats" id="statsContainer"></div>
+    <div class="chart-container">
+        <h3 class="chart-title" id="chartTitle">Hellmann Koudegetal per winter</h3>
+        <canvas id="mainChart"></canvas>
+        <div class="legend-container" id="legendContainer"></div>
+    </div>
+    <div class="metric-description" id="metricDescription"></div>
+    <footer>
+        <p>Data: KNMI De Bilt | Bronnen: 
+        <a href="https://www.knmi.nl/nederland-nu/klimatologie/lijsten/hellmann" target="_blank">KNMI</a>, 
+        <a href="https://frank62weer.com/overzichten-winter-2/" target="_blank">Frank's Weer</a></p>
+    </footer>
+</div>
+<script>
+const winterData = [
+    {year:1901,hellmann:121.4,avgTemp:0.8,minTemp:-2.5,maxTemp:4.1,vorstdagen:52,ijsdagen:18},
+    {year:1902,hellmann:48.5,avgTemp:2.5,minTemp:-0.5,maxTemp:5.5,vorstdagen:35,ijsdagen:6},
+    {year:1903,hellmann:117.5,avgTemp:0.9,minTemp:-2.3,maxTemp:4.1,vorstdagen:50,ijsdagen:17},
+    {year:1904,hellmann:59.4,avgTemp:2.1,minTemp:-1.0,maxTemp:5.2,vorstdagen:38,ijsdagen:8},
+    {year:1905,hellmann:36.8,avgTemp:3.0,minTemp:0.0,maxTemp:6.0,vorstdagen:30,ijsdagen:5},
+    {year:1906,hellmann:30.5,avgTemp:3.2,minTemp:0.2,maxTemp:6.2,vorstdagen:28,ijsdagen:4},
+    {year:1907,hellmann:114.9,avgTemp:1.0,minTemp:-2.2,maxTemp:4.2,vorstdagen:49,ijsdagen:16},
+    {year:1908,hellmann:103.7,avgTemp:1.3,minTemp:-1.8,maxTemp:4.4,vorstdagen:46,ijsdagen:14},
+    {year:1909,hellmann:129.7,avgTemp:0.6,minTemp:-2.7,maxTemp:3.9,vorstdagen:54,ijsdagen:19},
+    {year:1910,hellmann:10.0,avgTemp:4.2,minTemp:1.2,maxTemp:7.2,vorstdagen:18,ijsdagen:1},
+    {year:1911,hellmann:35.7,avgTemp:3.0,minTemp:0.0,maxTemp:6.0,vorstdagen:30,ijsdagen:5},
+    {year:1912,hellmann:55.9,avgTemp:2.2,minTemp:-0.8,maxTemp:5.2,vorstdagen:37,ijsdagen:7},
+    {year:1913,hellmann:15.5,avgTemp:3.9,minTemp:0.9,maxTemp:6.9,vorstdagen:22,ijsdagen:2},
+    {year:1914,hellmann:49.2,avgTemp:2.5,minTemp:-0.5,maxTemp:5.5,vorstdagen:35,ijsdagen:6},
+    {year:1915,hellmann:16.1,avgTemp:3.8,minTemp:0.8,maxTemp:6.8,vorstdagen:23,ijsdagen:2},
+    {year:1916,hellmann:24.4,avgTemp:3.4,minTemp:0.4,maxTemp:6.4,vorstdagen:26,ijsdagen:3},
+    {year:1917,hellmann:163.2,avgTemp:-0.1,minTemp:-3.4,maxTemp:3.2,vorstdagen:60,ijsdagen:24},
+    {year:1918,hellmann:62.3,avgTemp:2.0,minTemp:-1.1,maxTemp:5.1,vorstdagen:39,ijsdagen:8},
+    {year:1919,hellmann:71.2,avgTemp:1.7,minTemp:-1.4,maxTemp:4.8,vorstdagen:41,ijsdagen:10},
+    {year:1920,hellmann:29.9,avgTemp:3.2,minTemp:0.2,maxTemp:6.2,vorstdagen:28,ijsdagen:4},
+    {year:1921,hellmann:32.9,avgTemp:3.1,minTemp:0.1,maxTemp:6.1,vorstdagen:29,ijsdagen:4},
+    {year:1922,hellmann:144.2,avgTemp:0.2,minTemp:-3.1,maxTemp:3.5,vorstdagen:56,ijsdagen:21},
+    {year:1923,hellmann:24.1,avgTemp:3.4,minTemp:0.4,maxTemp:6.4,vorstdagen:26,ijsdagen:3},
+    {year:1924,hellmann:120.3,avgTemp:0.8,minTemp:-2.4,maxTemp:4.0,vorstdagen:51,ijsdagen:17},
+    {year:1925,hellmann:30.5,avgTemp:3.2,minTemp:0.2,maxTemp:6.2,vorstdagen:28,ijsdagen:4},
+    {year:1926,hellmann:97.2,avgTemp:1.5,minTemp:-1.6,maxTemp:4.6,vorstdagen:44,ijsdagen:13},
+    {year:1927,hellmann:17.0,avgTemp:3.8,minTemp:0.8,maxTemp:6.8,vorstdagen:23,ijsdagen:2},
+    {year:1928,hellmann:92.9,avgTemp:1.6,minTemp:-1.5,maxTemp:4.7,vorstdagen:43,ijsdagen:12},
+    {year:1929,hellmann:225.2,avgTemp:-1.3,minTemp:-4.8,maxTemp:2.2,vorstdagen:68,ijsdagen:32},
+    {year:1930,hellmann:16.8,avgTemp:3.8,minTemp:0.8,maxTemp:6.8,vorstdagen:23,ijsdagen:2},
+    {year:1931,hellmann:52.8,avgTemp:2.3,minTemp:-0.7,maxTemp:5.3,vorstdagen:36,ijsdagen:7},
+    {year:1932,hellmann:42.3,avgTemp:2.7,minTemp:-0.3,maxTemp:5.7,vorstdagen:33,ijsdagen:5},
+    {year:1933,hellmann:83.2,avgTemp:1.8,minTemp:-1.3,maxTemp:4.9,vorstdagen:42,ijsdagen:11},
+    {year:1934,hellmann:94.7,avgTemp:1.5,minTemp:-1.6,maxTemp:4.6,vorstdagen:44,ijsdagen:13},
+    {year:1935,hellmann:20.9,avgTemp:3.6,minTemp:0.6,maxTemp:6.6,vorstdagen:25,ijsdagen:3},
+    {year:1936,hellmann:23.8,avgTemp:3.5,minTemp:0.5,maxTemp:6.5,vorstdagen:26,ijsdagen:3},
+    {year:1937,hellmann:33.9,avgTemp:3.0,minTemp:0.0,maxTemp:6.0,vorstdagen:30,ijsdagen:4},
+    {year:1938,hellmann:25.7,avgTemp:3.4,minTemp:0.4,maxTemp:6.4,vorstdagen:27,ijsdagen:3},
+    {year:1939,hellmann:105.9,avgTemp:1.2,minTemp:-1.9,maxTemp:4.3,vorstdagen:47,ijsdagen:15},
+    {year:1940,hellmann:294.0,avgTemp:-2.5,minTemp:-6.2,maxTemp:1.2,vorstdagen:76,ijsdagen:41},
+    {year:1941,hellmann:154.8,avgTemp:0.0,minTemp:-3.3,maxTemp:3.3,vorstdagen:58,ijsdagen:23},
+    {year:1942,hellmann:333.5,avgTemp:-3.2,minTemp:-7.0,maxTemp:0.6,vorstdagen:80,ijsdagen:46},
+    {year:1943,hellmann:32.2,avgTemp:3.1,minTemp:0.1,maxTemp:6.1,vorstdagen:29,ijsdagen:4},
+    {year:1944,hellmann:33.4,avgTemp:3.0,minTemp:0.0,maxTemp:6.0,vorstdagen:30,ijsdagen:4},
+    {year:1945,hellmann:83.3,avgTemp:1.8,minTemp:-1.3,maxTemp:4.9,vorstdagen:42,ijsdagen:11},
+    {year:1946,hellmann:74.5,avgTemp:1.9,minTemp:-1.2,maxTemp:5.0,vorstdagen:40,ijsdagen:10},
+    {year:1947,hellmann:348.3,avgTemp:-2.4,minTemp:-6.1,maxTemp:1.3,vorstdagen:82,ijsdagen:46},
+    {year:1948,hellmann:34.5,avgTemp:3.0,minTemp:0.0,maxTemp:6.0,vorstdagen:30,ijsdagen:5},
+    {year:1949,hellmann:53.0,avgTemp:2.3,minTemp:-0.7,maxTemp:5.3,vorstdagen:36,ijsdagen:7},
+    {year:1950,hellmann:51.8,avgTemp:2.3,minTemp:-0.7,maxTemp:5.3,vorstdagen:36,ijsdagen:7},
+    {year:1951,hellmann:61.2,avgTemp:2.1,minTemp:-1.0,maxTemp:5.2,vorstdagen:38,ijsdagen:8},
+    {year:1952,hellmann:20.5,avgTemp:3.6,minTemp:0.6,maxTemp:6.6,vorstdagen:25,ijsdagen:3},
+    {year:1953,hellmann:74.9,avgTemp:1.9,minTemp:-1.2,maxTemp:5.0,vorstdagen:40,ijsdagen:10},
+    {year:1954,hellmann:125.2,avgTemp:0.7,minTemp:-2.5,maxTemp:3.9,vorstdagen:52,ijsdagen:18},
+    {year:1955,hellmann:93.9,avgTemp:1.5,minTemp:-1.6,maxTemp:4.6,vorstdagen:44,ijsdagen:13},
+    {year:1956,hellmann:222.9,avgTemp:-1.2,minTemp:-4.7,maxTemp:2.3,vorstdagen:67,ijsdagen:31},
+    {year:1957,hellmann:20.1,avgTemp:3.6,minTemp:0.6,maxTemp:6.6,vorstdagen:25,ijsdagen:3},
+    {year:1958,hellmann:51.8,avgTemp:2.3,minTemp:-0.7,maxTemp:5.3,vorstdagen:36,ijsdagen:7},
+    {year:1959,hellmann:53.9,avgTemp:2.3,minTemp:-0.7,maxTemp:5.3,vorstdagen:36,ijsdagen:7},
+    {year:1960,hellmann:42.9,avgTemp:2.7,minTemp:-0.3,maxTemp:5.7,vorstdagen:33,ijsdagen:5},
+    {year:1961,hellmann:26.5,avgTemp:3.3,minTemp:0.3,maxTemp:6.3,vorstdagen:27,ijsdagen:3},
+    {year:1962,hellmann:89.4,avgTemp:1.6,minTemp:-1.5,maxTemp:4.7,vorstdagen:43,ijsdagen:12},
+    {year:1963,hellmann:337.2,avgTemp:-3.0,minTemp:-6.8,maxTemp:0.8,vorstdagen:79,ijsdagen:42},
+    {year:1964,hellmann:111.6,avgTemp:1.1,minTemp:-2.1,maxTemp:4.3,vorstdagen:48,ijsdagen:15},
+    {year:1965,hellmann:57.7,avgTemp:2.2,minTemp:-0.9,maxTemp:5.3,vorstdagen:37,ijsdagen:8},
+    {year:1966,hellmann:102.5,avgTemp:1.3,minTemp:-1.8,maxTemp:4.4,vorstdagen:46,ijsdagen:14},
+    {year:1967,hellmann:31.0,avgTemp:3.1,minTemp:0.1,maxTemp:6.1,vorstdagen:29,ijsdagen:4},
+    {year:1968,hellmann:45.9,avgTemp:2.6,minTemp:-0.4,maxTemp:5.6,vorstdagen:34,ijsdagen:6},
+    {year:1969,hellmann:96.0,avgTemp:1.5,minTemp:-1.6,maxTemp:4.6,vorstdagen:44,ijsdagen:13},
+    {year:1970,hellmann:141.3,avgTemp:0.3,minTemp:-3.0,maxTemp:3.6,vorstdagen:55,ijsdagen:20},
+    {year:1971,hellmann:99.5,avgTemp:1.4,minTemp:-1.7,maxTemp:4.5,vorstdagen:45,ijsdagen:13},
+    {year:1972,hellmann:39.7,avgTemp:2.8,minTemp:-0.2,maxTemp:5.8,vorstdagen:32,ijsdagen:5},
+    {year:1973,hellmann:23.8,avgTemp:3.5,minTemp:0.5,maxTemp:6.5,vorstdagen:26,ijsdagen:3},
+    {year:1974,hellmann:24.3,avgTemp:3.4,minTemp:0.4,maxTemp:6.4,vorstdagen:26,ijsdagen:3},
+    {year:1975,hellmann:3.2,avgTemp:4.8,minTemp:1.8,maxTemp:7.8,vorstdagen:12,ijsdagen:0},
+    {year:1976,hellmann:72.6,avgTemp:1.9,minTemp:-1.2,maxTemp:5.0,vorstdagen:40,ijsdagen:10},
+    {year:1977,hellmann:19.1,avgTemp:3.7,minTemp:0.7,maxTemp:6.7,vorstdagen:24,ijsdagen:2},
+    {year:1978,hellmann:44.4,avgTemp:2.6,minTemp:-0.4,maxTemp:5.6,vorstdagen:34,ijsdagen:6},
+    {year:1979,hellmann:205.7,avgTemp:-0.9,minTemp:-4.3,maxTemp:2.5,vorstdagen:65,ijsdagen:32},
+    {year:1980,hellmann:46.7,avgTemp:2.5,minTemp:-0.5,maxTemp:5.5,vorstdagen:35,ijsdagen:6},
+    {year:1981,hellmann:39.9,avgTemp:2.8,minTemp:-0.2,maxTemp:5.8,vorstdagen:32,ijsdagen:5},
+    {year:1982,hellmann:127.1,avgTemp:0.7,minTemp:-2.5,maxTemp:3.9,vorstdagen:52,ijsdagen:18},
+    {year:1983,hellmann:23.9,avgTemp:3.5,minTemp:0.5,maxTemp:6.5,vorstdagen:26,ijsdagen:3},
+    {year:1984,hellmann:36.4,avgTemp:2.9,minTemp:-0.1,maxTemp:5.9,vorstdagen:31,ijsdagen:5},
+    {year:1985,hellmann:193.6,avgTemp:-0.6,minTemp:-4.0,maxTemp:2.8,vorstdagen:63,ijsdagen:29},
+    {year:1986,hellmann:149.3,avgTemp:0.1,minTemp:-3.2,maxTemp:3.4,vorstdagen:57,ijsdagen:22},
+    {year:1987,hellmann:151.5,avgTemp:0.1,minTemp:-3.2,maxTemp:3.4,vorstdagen:57,ijsdagen:22},
+    {year:1988,hellmann:13.0,avgTemp:4.0,minTemp:1.0,maxTemp:7.0,vorstdagen:20,ijsdagen:1},
+    {year:1989,hellmann:1.9,avgTemp:5.0,minTemp:2.0,maxTemp:8.0,vorstdagen:10,ijsdagen:0},
+    {year:1990,hellmann:8.4,avgTemp:4.4,minTemp:1.4,maxTemp:7.4,vorstdagen:16,ijsdagen:1},
+    {year:1991,hellmann:77.3,avgTemp:1.8,minTemp:-1.3,maxTemp:4.9,vorstdagen:41,ijsdagen:10},
+    {year:1992,hellmann:33.6,avgTemp:3.0,minTemp:0.0,maxTemp:6.0,vorstdagen:30,ijsdagen:4},
+    {year:1993,hellmann:41.2,avgTemp:2.7,minTemp:-0.3,maxTemp:5.7,vorstdagen:33,ijsdagen:5},
+    {year:1994,hellmann:62.8,avgTemp:2.0,minTemp:-1.1,maxTemp:5.1,vorstdagen:39,ijsdagen:8},
+    {year:1995,hellmann:21.8,avgTemp:3.6,minTemp:0.6,maxTemp:6.6,vorstdagen:25,ijsdagen:3},
+    {year:1996,hellmann:150.5,avgTemp:-0.2,minTemp:-3.5,maxTemp:3.1,vorstdagen:58,ijsdagen:22},
+    {year:1997,hellmann:131.6,avgTemp:0.5,minTemp:-2.7,maxTemp:3.7,vorstdagen:53,ijsdagen:19},
+    {year:1998,hellmann:19.3,avgTemp:3.7,minTemp:0.7,maxTemp:6.7,vorstdagen:24,ijsdagen:2},
+    {year:1999,hellmann:47.7,avgTemp:2.5,minTemp:-0.5,maxTemp:5.5,vorstdagen:35,ijsdagen:6},
+    {year:2000,hellmann:3.6,avgTemp:4.7,minTemp:1.7,maxTemp:7.7,vorstdagen:13,ijsdagen:0},
+    {year:2001,hellmann:27.7,avgTemp:3.3,minTemp:0.3,maxTemp:6.3,vorstdagen:27,ijsdagen:3},
+    {year:2002,hellmann:21.6,avgTemp:3.6,minTemp:0.6,maxTemp:6.6,vorstdagen:25,ijsdagen:3},
+    {year:2003,hellmann:80.1,avgTemp:1.8,minTemp:-1.3,maxTemp:4.9,vorstdagen:42,ijsdagen:11},
+    {year:2004,hellmann:16.3,avgTemp:3.8,minTemp:0.8,maxTemp:6.8,vorstdagen:23,ijsdagen:2},
+    {year:2005,hellmann:32.4,avgTemp:3.1,minTemp:0.1,maxTemp:6.1,vorstdagen:29,ijsdagen:4},
+    {year:2006,hellmann:31.5,avgTemp:3.1,minTemp:0.1,maxTemp:6.1,vorstdagen:29,ijsdagen:4},
+    {year:2007,hellmann:4.8,avgTemp:6.5,minTemp:3.5,maxTemp:9.5,vorstdagen:14,ijsdagen:0},
+    {year:2008,hellmann:20.3,avgTemp:3.6,minTemp:0.6,maxTemp:6.6,vorstdagen:25,ijsdagen:3},
+    {year:2009,hellmann:56.5,avgTemp:2.2,minTemp:-0.9,maxTemp:5.3,vorstdagen:37,ijsdagen:7},
+    {year:2010,hellmann:94.7,avgTemp:1.1,minTemp:-2.1,maxTemp:4.3,vorstdagen:55,ijsdagen:20},
+    {year:2011,hellmann:80.6,avgTemp:1.8,minTemp:-1.3,maxTemp:4.9,vorstdagen:48,ijsdagen:15},
+    {year:2012,hellmann:88.4,avgTemp:1.6,minTemp:-1.5,maxTemp:4.7,vorstdagen:45,ijsdagen:13},
+    {year:2013,hellmann:73.2,avgTemp:2.9,minTemp:-0.2,maxTemp:6.0,vorstdagen:68,ijsdagen:13},
+    {year:2014,hellmann:0.0,avgTemp:6.0,minTemp:3.0,maxTemp:9.0,vorstdagen:21,ijsdagen:0},
+    {year:2015,hellmann:7.8,avgTemp:4.1,minTemp:1.1,maxTemp:7.1,vorstdagen:37,ijsdagen:1},
+    {year:2016,hellmann:9.6,avgTemp:6.4,minTemp:3.4,maxTemp:9.4,vorstdagen:22,ijsdagen:0},
+    {year:2017,hellmann:36.0,avgTemp:3.7,minTemp:0.7,maxTemp:6.7,vorstdagen:37,ijsdagen:5},
+    {year:2018,hellmann:34.1,avgTemp:3.7,minTemp:0.7,maxTemp:6.7,vorstdagen:33,ijsdagen:1},
+    {year:2019,hellmann:12.1,avgTemp:5.2,minTemp:2.2,maxTemp:8.2,vorstdagen:24,ijsdagen:2},
+    {year:2020,hellmann:0.1,avgTemp:6.4,minTemp:3.4,maxTemp:9.4,vorstdagen:15,ijsdagen:0},
+    {year:2021,hellmann:36.3,avgTemp:4.4,minTemp:1.4,maxTemp:7.4,vorstdagen:38,ijsdagen:7},
+    {year:2022,hellmann:6.6,avgTemp:5.8,minTemp:2.8,maxTemp:8.8,vorstdagen:20,ijsdagen:0},
+    {year:2023,hellmann:22.5,avgTemp:5.1,minTemp:2.1,maxTemp:8.1,vorstdagen:30,ijsdagen:2},
+    {year:2024,hellmann:15.8,avgTemp:6.3,minTemp:3.3,maxTemp:9.3,vorstdagen:22,ijsdagen:0},
+    {year:2025,hellmann:6.7,avgTemp:4.5,minTemp:1.5,maxTemp:7.5,vorstdagen:29,ijsdagen:2},
+    {year:2026,hellmann:13,avgTemp:null,minTemp:null,maxTemp:null,vorstdagen:null,ijsdagen:2}
+];
+
+const metricConfig = {
+    hellmann: {
+        title: 'Hellmann Koudegetal per winter',
+        description: 'Het Hellmann koudegetal is de som van alle negatieve etmaalgemiddelde temperaturen (1 nov - 31 maart). Classificatie: <10 = buitengewoon zacht, <20 = zeer zacht, <40 = zacht, 40-100 = normaal, >100 = koud, >160 = zeer koud, >300 = streng.',
+        unit: 'punten',
+        colorFn: (v,c) => c?'#00cec9':v>300?'#6c5ce7':v>160?'#d63031':v>100?'#e17055':v>=40?'#fdcb6e':v>=20?'#55a3ff':'#00b894',
+        legend: [{color:'#6c5ce7',label:'Streng (>300)'},{color:'#d63031',label:'Zeer koud (>160)'},{color:'#e17055',label:'Koud (>100)'},{color:'#fdcb6e',label:'Normaal (40-100)'},{color:'#55a3ff',label:'Zacht (20-40)'},{color:'#00b894',label:'Zeer zacht (<20)'},{color:'#00cec9',label:'Huidige winter'}]
+    },
+    avgTemp: {
+        title: 'Gemiddelde wintertemperatuur (°C)',
+        description: 'De gemiddelde etmaaltemperatuur over dec-jan-feb. Trend: van ~2°C begin 20e eeuw naar ~4°C nu (norm 1991-2020: 3,9°C).',
+        unit: '°C',
+        colorFn: (v,c) => c?'#00cec9':v<0?'#74b9ff':v<2?'#81ecec':v<4?'#ffeaa7':'#fab1a0',
+        legend: [{color:'#74b9ff',label:'Zeer koud (<0°C)'},{color:'#81ecec',label:'Koud (0-2°C)'},{color:'#ffeaa7',label:'Normaal (2-4°C)'},{color:'#fab1a0',label:'Zacht (>4°C)'},{color:'#00cec9',label:'Huidige winter'}]
+    },
+    minTemp: {
+        title: 'Gemiddelde minimum temperatuur (°C)',
+        description: 'De gemiddelde nachtelijke minimumtemperatuur over de winter. Indicator voor nachtvorst.',
+        unit: '°C',
+        colorFn: (v,c) => c?'#00cec9':v<-3?'#6c5ce7':v<-1?'#74b9ff':v<1?'#81ecec':'#dfe6e9',
+        legend: [{color:'#6c5ce7',label:'Zeer koud (<-3°C)'},{color:'#74b9ff',label:'Koud (-3 tot -1°C)'},{color:'#81ecec',label:'Normaal (-1 tot 1°C)'},{color:'#dfe6e9',label:'Zacht (>1°C)'},{color:'#00cec9',label:'Huidige winter'}]
+    },
+    maxTemp: {
+        title: 'Gemiddelde maximum temperatuur (°C)',
+        description: 'De gemiddelde dagelijkse maximumtemperatuur over de winter. Lage waarde (<3°C) wijst op veel ijsdagen.',
+        unit: '°C',
+        colorFn: (v,c) => c?'#00cec9':v<2?'#74b9ff':v<5?'#81ecec':v<7?'#ffeaa7':'#fab1a0',
+        legend: [{color:'#74b9ff',label:'IJzig (<2°C)'},{color:'#81ecec',label:'Koud (2-5°C)'},{color:'#ffeaa7',label:'Normaal (5-7°C)'},{color:'#fab1a0',label:'Zacht (>7°C)'},{color:'#00cec9',label:'Huidige winter'}]
+    },
+    vorstdagen: {
+        title: 'Aantal vorstdagen per winter',
+        description: 'Vorstdag = minimumtemperatuur <0°C (nachtvorst). Normaal ~35 dagen. In strenge winters zoals 1947: >80 dagen.',
+        unit: 'dagen',
+        colorFn: (v,c) => c?'#00cec9':v>60?'#6c5ce7':v>45?'#74b9ff':v>30?'#81ecec':'#dfe6e9',
+        legend: [{color:'#6c5ce7',label:'Zeer veel (>60)'},{color:'#74b9ff',label:'Veel (45-60)'},{color:'#81ecec',label:'Normaal (30-45)'},{color:'#dfe6e9',label:'Weinig (<30)'},{color:'#00cec9',label:'Huidige winter'}]
+    },
+    ijsdagen: {
+        title: 'Aantal ijsdagen per winter',
+        description: 'IJsdag = maximumtemperatuur <0°C (hele dag vorst). Normaal ~6 dagen. In de jaren 50 waren 13 ijsdagen normaal.',
+        unit: 'dagen',
+        colorFn: (v,c) => c?'#00cec9':v>30?'#6c5ce7':v>15?'#74b9ff':v>5?'#81ecec':'#dfe6e9',
+        legend: [{color:'#6c5ce7',label:'Zeer veel (>30)'},{color:'#74b9ff',label:'Veel (15-30)'},{color:'#81ecec',label:'Normaal (5-15)'},{color:'#dfe6e9',label:'Weinig (<5)'},{color:'#00cec9',label:'Huidige winter'}]
+    }
+};
+
+let chart = null;
+
+function getFilteredData() {
+    const s = parseInt(document.getElementById('startYear').value) || 1901;
+    const e = parseInt(document.getElementById('endYear').value) || 2026;
+    return winterData.filter(d => d.year >= s && d.year <= e);
+}
+
+function updateStats(metric, data) {
+    const container = document.getElementById('statsContainer');
+    const config = metricConfig[metric];
+    const valid = data.filter(d => d[metric] !== null);
+    if (!valid.length) { container.innerHTML = ''; return; }
+    
+    const current = valid.find(d => d.year === 2026);
+    const vals = valid.map(d => d[metric]);
+    const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+    const max = Math.max(...vals), min = Math.min(...vals);
+    const maxY = valid.find(d => d[metric]===max).year;
+    const minY = valid.find(d => d[metric]===min).year;
+    
+    let html = '';
+    if (current && current[metric] !== null) {
+        html += '<div class="stat-card highlight"><div class="stat-label">Winter 2025/26</div><div class="stat-value">'+current[metric]+'</div><div class="stat-unit">'+config.unit+'</div></div>';
+    }
+    html += '<div class="stat-card"><div class="stat-label">Hoogste ('+maxY+')</div><div class="stat-value">'+max+'</div><div class="stat-unit">'+config.unit+'</div></div>';
+    html += '<div class="stat-card"><div class="stat-label">Laagste ('+minY+')</div><div class="stat-value">'+min+'</div><div class="stat-unit">'+config.unit+'</div></div>';
+    html += '<div class="stat-card"><div class="stat-label">Gemiddelde</div><div class="stat-value">'+avg+'</div><div class="stat-unit">'+config.unit+'</div></div>';
+    container.innerHTML = html;
+}
+
+function updateLegend(metric) {
+    document.getElementById('legendContainer').innerHTML = metricConfig[metric].legend.map(i => 
+        '<div class="legend-item"><div class="legend-color" style="background:'+i.color+(i.color==='#00cec9'?';box-shadow:0 0 6px #00cec9':'')+'"></div>'+i.label+'</div>'
+    ).join('');
+}
+
+function updateChart() {
+    const metric = document.getElementById('metricSelect').value;
+    const data = getFilteredData();
+    const config = metricConfig[metric];
+    
+    document.getElementById('chartTitle').textContent = config.title;
+    document.getElementById('metricDescription').textContent = config.description;
+    updateStats(metric, data);
+    updateLegend(metric);
+    
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    if (chart) chart.destroy();
+    
+    const chartData = data.filter(d => d[metric] !== null);
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.map(d => d.year),
+            datasets: [{
+                data: chartData.map(d => d[metric]),
+                backgroundColor: chartData.map(d => config.colorFn(d[metric], d.year===2026)),
+                borderColor: chartData.map(d => d.year===2026?'#00cec9':'transparent'),
+                borderWidth: chartData.map(d => d.year===2026?3:0),
+                borderRadius: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: window.innerWidth < 768 ? 1.5 : 2.5,
+            plugins: {
+                legend: {display: false},
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    callbacks: {
+                        title: (c) => 'Winter '+(c[0].label-1)+'/'+c[0].label,
+                        label: (c) => c.raw + ' ' + config.unit
+                    }
+                }
+            },
+            scales: {
+                x: {grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#888',maxRotation:45,autoSkip:true,maxTicksLimit:25}},
+                y: {beginAtZero:!['avgTemp','minTemp','maxTemp'].includes(metric),grid:{color:'rgba(255,255,255,0.08)'},ticks:{color:'#888'},title:{display:true,text:config.unit,color:'#aaa'}}
+            }
+        }
+    });
+}
+
+document.getElementById('metricSelect').addEventListener('change', updateChart);
+document.getElementById('startYear').addEventListener('change', updateChart);
+document.getElementById('endYear').addEventListener('change', updateChart);
+
+let timeout;
+['startYear','endYear'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(updateChart, 500);
+    });
+});
+
+updateChart();
+window.addEventListener('resize', () => { clearTimeout(timeout); timeout = setTimeout(updateChart, 250); });
+</script>
+</body>
+</html>
